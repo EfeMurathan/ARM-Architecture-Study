@@ -1,0 +1,32 @@
+# EE/CS Department - Computer Architecture & Systems
+## Lab 5: I/O Devices, GPIO, and Hardware Timers
+
+### 1. Objectives
+The purpose of this laboratory exercise is to investigate the low-level management of Input/Output devices. The primary objectives are to:
+* Implement program-controlled polling techniques to interface with external peripherals without relying on interrupts.
+* Configure and manipulate General Purpose I/O (GPIO) ports and parallel interfaces on the Altera DE1-SoC architecture.
+* Master the ARM A9 Private Timer module for precise hardware-level delay generation.
+* Design dynamic bit-shifting algorithms across multiple memory-mapped displays.
+
+### 2. Theoretical Background & Hardware Registers
+This laboratory focuses on bridging the ARM processor with external peripherals. To achieve this, specific memory-mapped registers are configured and polled continuously:
+
+* **General Purpose I/O (GPIO1) Port (`0xFF709000`):** Used to control the HPS green light (LEDG). This interface includes a Data Register (offset `0x0`) and a Data Direction Register (DDR, offset `0x4`). To drive the LED, bit 24 of the DDR must be configured as an output (writing a `1`), allowing the processor to toggle the LED via the Data Register.
+* **ARM A9 Private Timer (`0xFFFEC600`):** A critical component for generating accurate time delays. It comprises four main 32-bit registers:
+  * **Load Register (offset `0x0`):** Holds the initial countdown value. At 200 MHz, a value of `200,000,000` equals exactly 1 second.
+  * **Control Register (offset `0x8`):** Configures timer behavior. Setting the `A` (Auto-reload) and `E` (Enable) bits ensures continuous operation.
+  * **Interrupt Status Register (offset `0xC`):** Contains the `F` (Flag) bit, which asserts when the timer reaches zero. This register is continuously polled and must be acknowledged by writing a `1` to clear the flag.
+* **Pushbutton KEYs Parallel Port (`0xFF200050`):** Handles tactile input. Instead of reading the volatile data state, the processor polls the **Edge-Capture Register (offset `0xC`)**. This register latches onto logic transitions (button presses) and holds them until the processor explicitly acknowledges the event by writing a `1` to the corresponding bit.
+
+### 3. Laboratory Tasks & Implementation Details
+
+* **Task 1 (`Task1.s`) - Periodic HPS LEDG Toggle:**
+  This routine initializes the ARM A9 Private Timer with a 1-second delay payload. The program executes a tight polling loop on the Timer's Interrupt Status Register. Upon expiration, the software acknowledges the timer hardware and uses bitwise XOR logic (`EOR`) to flip bit 24 of the GPIO1 Data Register, creating a perfectly synchronized, periodic blinking effect on the green LED.
+
+* **Task 2 (`Task2.s`) - Polled KEY Interaction for LEDG:**
+  This task shifts focus to asynchronous hardware events. The program continuously polls the Edge-Capture register of the parallel port to detect state changes from the pushbuttons. Once an edge is captured, the subroutine halts polling, acknowledges the specific bit to reset the hardware trigger, and toggles the HPS LEDG state accordingly.
+
+* **Task 3 (`Task3_1.s` & `Task3_2.s`) - Dynamic "Knight Rider" HEX Pattern:**
+  A complex bit-manipulation algorithm designed to render a sweeping "Knight Rider" animation on the 7-segment displays.
+  * **`Task3_1.s`:** Animates the middle segment (`0x40`) horizontally across `HEX3-0` (`0xFF200020`). It utilizes logical shifts (`LSL`) and custom boundary-checking branches to reverse the animation direction dynamically.
+  * **`Task3_2.s`:** A more advanced modular implementation that seamlessly extends the sweeping pattern across all six displays (`HEX5-0`). Since `HEX5-4` is mapped to a separate parallel port (`0xFF200030`), the code intelligently hands off the shifting bit across the memory boundary, utilizing a unified `TIMER_WAIT` polling subroutine for synchronized frame rendering.
