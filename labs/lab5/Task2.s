@@ -9,13 +9,13 @@ _start:
         LDR     R1, =KEY_BASE               //KEY base address (0xFF200050)
 
         LDR     R2, =bit_24_pattern
-        STR     R2, [R0, #0x4]              //set bit24 as output
+        STR     R2, [R0, #0x4]              
 
-        MOV     R2, #0                      //LEDG off initially
+        MOV     R2, #0                      //LEDG off 
         STR     R2, [R0]                    //write to data register
 
 KEYEE:
-        LDR     R3, [R1, #0xC]              //EdgeCapture
+        LDR     R3, [R1, #0xC]              //Edgecapture
         CMP     R3, #0
         BEQ     KEYEE                       //polling
 
